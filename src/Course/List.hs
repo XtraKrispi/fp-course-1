@@ -304,7 +304,7 @@ reverse (x :. xs) = reverse xs ++ (x :. Nil)
 reverse' ::
   List a
   -> List a
-reverse' xs = foldRight (\a as -> as ++ (a :. Nil)) Nil xs
+reverse' = foldRight (\a as -> as ++ (a :. Nil)) Nil
 
 -- | Produce an infinite `List` that seeds with the given value at its head,
 -- then runs the given function for subsequent elements
