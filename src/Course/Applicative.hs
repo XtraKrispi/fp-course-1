@@ -88,14 +88,13 @@ instance Applicative Optional where
   pure ::
     a
     -> Optional a
-  pure =
-    error "todo: Course.Applicative pure#instance Optional"
+  pure = Full
   (<*>) ::
     Optional (a -> b)
     -> Optional a
     -> Optional b
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance Optional"
+  (Full fn) <*> (Full a) = Full $ fn a
+  _ <*> _ = Empty
 
 -- | Insert into a constant function.
 --
@@ -115,18 +114,19 @@ instance Applicative Optional where
 -- 15
 --
 -- prop> \x y -> pure x y == x
+
 instance Applicative ((->) t) where
   pure ::
     a
-    -> ((->) t a)
-  pure =
-    error "todo: Course.Applicative pure#((->) t)"
+    -> ((->) t a) -- pure :: a -> t -> a
+  pure = const
+
   (<*>) ::
     ((->) t (a -> b))
     -> ((->) t a)
     -> ((->) t b)
-  (<*>) =
-    error "todo: Course.Apply (<*>)#instance ((->) t)"
+  tfn <*> ta = \t -> let a = ta t
+                     in tfn t a
 
 
 -- | Apply a binary function in the environment.
@@ -154,8 +154,7 @@ lift2 ::
   -> f a
   -> f b
   -> f c
-lift2 =
-  error "todo: Course.Applicative#lift2"
+lift2 fn fa fb = fn <$> fa <*> fb
 
 -- | Apply a ternary function in the environment.
 -- /can be written using `lift2` and `(<*>)`./
@@ -187,8 +186,7 @@ lift3 ::
   -> f b
   -> f c
   -> f d
-lift3 =
-  error "todo: Course.Applicative#lift3"
+lift3 fn a b c = fn <$> a <*> b <*> c
 
 -- | Apply a quaternary function in the environment.
 -- /can be written using `lift3` and `(<*>)`./
@@ -221,16 +219,13 @@ lift4 ::
   -> f c
   -> f d
   -> f e
-lift4 =
-  error "todo: Course.Applicative#lift4"
-
+lift4 fn a b c d = fn <$> a <*> b <*> c <*> d
 -- | Apply a nullary function in the environment.
 lift0 ::
   Applicative f =>
   a
   -> f a
-lift0 =
-  error "todo: Course.Applicative#lift0"
+lift0 = pure
 
 -- | Apply a unary function in the environment.
 -- /can be written using `lift0` and `(<*>)`./
@@ -248,8 +243,7 @@ lift1 ::
   (a -> b)
   -> f a
   -> f b
-lift1 =
-  error "todo: Course.Applicative#lift1"
+lift1 = (<$>)
 
 -- | Apply, discarding the value of the first argument.
 -- Pronounced, right apply.
@@ -274,8 +268,7 @@ lift1 =
   f a
   -> f b
   -> f b
-(*>) =
-  error "todo: Course.Applicative#(*>)"
+fa *> fb = lift2 (\_ b -> b) fa fb
 
 -- | Apply, discarding the value of the second argument.
 -- Pronounced, left apply.
@@ -300,8 +293,7 @@ lift1 =
   f b
   -> f a
   -> f b
-(<*) =
-  error "todo: Course.Applicative#(<*)"
+fb <* fa = lift2 const fb fa
 
 -- | Sequences a list of structures to a structure of list.
 --
@@ -323,8 +315,7 @@ sequence ::
   Applicative f =>
   List (f a)
   -> f (List a)
-sequence =
-  error "todo: Course.Applicative#sequence"
+sequence = foldRight (lift2 (:.)) (pure Nil)
 
 -- | Replicate an effect a given number of times.
 --
@@ -338,7 +329,15 @@ sequence =
 -- Empty
 --
 -- >>> replicateA 4 (*2) 5
--- [10,10,10,10]
+-- <interactive>:3817:2-20: warning: [-Wtype-defaults]
+--     * Defaulting the following constraints to type `Integer'
+--         (Show t0)
+--           arising from a use of `System.IO.print' at <interactive>:3817:2-20
+--         (Num t0) arising from a use of `it' at <interactive>:3817:2-20
+--     * In a stmt of an interactive GHCi command: System.IO.print it
+-- *** Exception: todo: Course.Applicative#replicateA
+-- CallStack (from HasCallStack):
+--   error, called at c:\Users\mgold\Projects\fp-course-1\src\Course\Applicative.hs:342:3 in main:Course.Applicative
 --
 -- >>> replicateA 3 ('a' :. 'b' :. 'c' :. Nil)
 -- ["aaa","aab","aac","aba","abb","abc","aca","acb","acc","baa","bab","bac","bba","bbb","bbc","bca","bcb","bcc","caa","cab","cac","cba","cbb","cbc","cca","ccb","ccc"]
@@ -347,8 +346,7 @@ replicateA ::
   Int
   -> f a
   -> f (List a)
-replicateA =
-  error "todo: Course.Applicative#replicateA"
+replicateA i a = replicate i <$> a
 
 -- | Filter a list with a predicate that produces an effect.
 --
@@ -375,8 +373,10 @@ filtering ::
   (a -> f Bool)
   -> List a
   -> f (List a)
-filtering =
-  error "todo: Course.Applicative#filtering"
+filtering fn = foldRight (\a fa -> let b = fn a
+                                   in lift2 (filterFn a) b fa)
+                         (pure Nil)
+  where filterFn a b xs = if b then a :. xs else xs
 
 -----------------------
 -- SUPPORT LIBRARIES --
